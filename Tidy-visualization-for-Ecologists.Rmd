@@ -1,0 +1,1299 @@
+---
+title: "Tidy visulization (ggplot2) for Ecologists"
+author: "LGCarlson"
+date: "6/20/2019"
+output: html_document
+---
+
+Hopefully you've been able update to use the newest version of R and install the tidyverse packages already. There are a few more packages you'll need, so run the first chunk of code to check for those packages and install them if needed.
+
+```{r library check, include=FALSE}
+library_check<- function(libraries) {
+  ## Details
+  # This function will check for and then either load or install any libraries needed to run subsequent functions
+  
+  # Args:
+  # libraries = Vector of required library names
+  
+  # Returns: NA, just downloads/loads libraries into current work space.
+  
+  ## Start function
+  lapply(libraries, FUN = function(x) {
+    if (!require(x, character.only = TRUE)) {
+      install.packages(x, dependencies = TRUE)
+      library(x, character.only = TRUE)
+    }
+  })
+  ## End function
+}
+
+# Load libraries
+libraries.needed<- c("tidyverse", "tidytext", "lubridate", "gapminder", "ggthemes","scales","kableExtra", "viridis", "adehabitatHR",
+                     "wesanderson","janitor","rnaturalearth","rnaturalearthdata","ggspatial","sp","sf", "rworldmap","rgdal")
+library_check(libraries.needed)
+
+```
+
+
+Please load all necessary packages.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytext)
+library(lubridate)
+library(gapminder)
+library(ggthemes)
+library(scales)
+library(kableExtra)
+library(janitor)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(ggspatial)
+library(sp)
+library(rworldmap)
+library(rgdal)
+library(adehabitatHR)
+library(viridis)
+library(dplyr)
+
+theme_set(theme_light())
+
+check = function(x){summary(as.factor(x))}
+```
+
+## Welcome to the...
+```{r welcome to the jungle, echo=FALSE}
+tidyverse_logo()
+```
+
+## Tidyverse
+
+> The tidyverse is an *opinionated* collection of R packages designed for data science. ~Hadley Wickham
+
+The tidyverse is a group of packages with a common design philosophy that uses a concise syntax to help you clean, organize, analyze, and visualize large data sets with ease. The syntax was popularized by “R for Data Science” by Hadley Wickham and Garrett Grolemund, but its rooted in the idea that workflows should be both readable and reproducible. Tidyverse packages help your code read left to right, more like a sentence: in base code, you'd write `h(g(f(x)))` but in tidyverse syntax, you'd write `x %>% f %>% g %>% h`.
+
+Here is the *opinion* part:
+
+>“Programs must be written for people to read and only incidentally for machines to execute”. ~Hal Abelson
+
+If you think about it, it really does make more sense to read your code like you'd read a book rather than reading from the inside out. As more of a writer than a mathemetician myself, this structure inherently made more sense to me than dollar sign or function syntax. Learning ggplot and other tidy commands transformed me from a reluctant and deficient coder into an enthusiastic (and hopefully proficient) one! 
+
+The tidyverse is widely used because it is logical, but also because it has packages for every step of your data's journey from import to output. Each package uses consistent a grammar and data structure.
+
+**1) Import:** 
+
+* readr
+
+**2) Tidy:** 
+
+* tibble
+
+* tidyr
+
+**3) Transform:**
+
+* dplyr
+
+* forcats
+
+* lubridate
+
+* stringr
+
+**4) Visualize:** 
+
+* ggplot2
+
+**5) Model:**
+
+* broom
+
+* modelr
+
+**6) Program:**
+
+* purrrr
+
+* magrittr.. [ceci n'est pas une pipe!](https://github.com/tidyverse/magrittr/issues/153)
+
+
+There are many more great packages that are tidy-friendly, but we will focus on this core group, and more specifically on tidy, dplyr, and ggplot2. Fear not, you don't need to install all of these packages individually, just load the tidyverse! Note: you can find the ultimate tidyverse cheat sheet [here](https://s3.amazonaws.com/assets.datacamp.com/blog_assets/Tidyverse+Cheat+Sheet.pdf) and a variety of great documentation all around the web.
+
+`install.packages("tidyverse") library(tidyverse)`
+
+
+### Grammar
+
+Before we start coding, there are a few peices of tidyverse jargon we need to define:
+
+*[tidy data](https://vita.had.co.nz/papers/tidy-data.pdf)* - In the framework of tidy data every row is an observation, every column represents variables and every entry into the cells of the data frame are values. As you might expect, the tidyverse aims to create, visualize, and analyze data in a tidy format.
+
+*[tibble](https://cran.r-project.org/web/packages/tibble/vignettes/tibble.html)* - Tibbles are a modern take on data frames. They keep the features that have stood the test of time, and drop the features that used to be convenient but are now frustrating (i.e. converting character vectors to factors). More on tibbles later.
+
+*%>% also known as a pipe* - The infix operator is a function that passes the left hand side of the operator to the first argument on the right hand side of the operator. Thus, `iris %>% head()` is equivalent to `head(iris)`. This operator is convinient because you can call the pipe multiple times to "chain" functions together (nesting in base R). The pipe operator is not required to use tidyverse functions, but it does make them more convinient.
+
+
+## Tidyverse commannds
+
+The following section describes the basic data loading and cleaning functions of the tidyverse. If you're not familiar with tidyverse commands, hopefully this will be a good resource to help you implement some tidyverse functions and stop using so many loops :) 
+
+## Readr
+
+To read in a dataset, use the readr package. `readr::read_csv` replaces `read.csv` which allows for faster data reading. read_csv will also preserve column names and it will not coerce characters to factors (i.e., no more `header = TRUE, stringsAsFactors = FALSE)` yay!) 
+
+```{r read cetaceans data, message=FALSE, warning=FALSE}
+cetaceans<-read_csv("https://raw.githubusercontent.com/LGCarlson/tidytuesday/master/data/2018/2018-12-18/allCetaceanData.csv")
+
+cetaceans %>% class()
+```
+_Base R equalivalent_
+```{r read.csv in Base R}
+# Base R equalivalent:
+
+# cetatceans<-read.csv("https://raw.githubusercontent.com/LGCarlson/tidytuesday/master/data/2018/2018-12-18/allCetaceanData.csv",header = TRUE, stringsAsFactors = FALSE)
+
+# class(cetaceaens)
+# [1] "data.frame"
+```
+
+
+## Tibble
+As shown by calling "class" above, readr functions automatically read your dataset as a tibble. Let's see what that looks like by calling head() and asking for the first 10 observations. 
+
+```{r define head}
+cetaceans %>%
+  head()
+```
+
+_Base R equalivalent_
+```{r head in Base R}
+# Base R equalivalent: 
+
+# head(cetaceans)
+```
+
+
+When you preview a tibble, it always prints the class of each object, but you can get more information about the tibble by calling glimpse. This is a good function to know. As a wise colleage once advised me... "always check the %$#*ing structure!" 
+
+```{r define glimpse}
+cetaceans %>% 
+  View()
+```
+
+_Base R equalivalent_
+```{r str in Base R}
+# Base R equalivalent: 
+
+# str(cetaceans)
+```
+
+
+## Tidyr
+
+Is this a tidy dataset as it is? It is! But could it be.... dare I say, tidyr?
+
+Here are a few tidyr functions that may be useful. 
+
+#### **separate** - separate one column into several
+
+The separate function is telling R to seperate the "originDate"  column into "originYear","originMonth", and "originDay". 
+
+The sep= command tells the function what each element is separated by. Unfortunately, this command does not work for to separate lowercase from capsital letters without a symbol in between (i.e., can handle m.ABDU but not mABDU... bonus points if you can tell me what ABDU is). Sep = can take [^[:alnum:]]+. For seperating capital letters, you'll have to use "extract."  
+
+Finally, remove = TRUE deletes the original column, but remove = FALSE retains it. 
+
+The select column is just saying we want to ignore all the other data columns except originDate, originYear, originMonth, and originDay.
+
+```{r define separate}
+cetaceans %>% 
+  separate(.,originDate, into = c("a","b", "c"), sep = "-", remove = FALSE) %>%
+  dplyr::select(originDate, a, b, c) %>%
+  head(10)
+```
+
+_Base R equalivalent_
+```{r define separate Base R}
+# Base R equalivalent:
+
+# originDate<-as.character(cetaceans$originDate)
+
+# YMD<-c()
+# for(i in 1:length(originDate)){
+# if(is.na(originDate[i])){
+#    YMD<-rbind(YMD,rep(NA,3))
+#    next
+# }
+# YMD<-rbind(YMD,unlist(strsplit(originDate[i],"-")))
+# }
+
+# Dates<-data.frame(originDate=cetaceans$originDate,
+#                   originYear=YMD[,1],
+#                   originMonth=YMD[,2],
+#                   originDay=YMD[,3])
+
+# head(Dates)
+```
+
+
+#### **gather** - gather columns into rows (make a long dataset)
+
+There isn't a variable I would actually want to gather by in this dataset, but we'll pretend.
+
+_Explanation by line:_ 
+
+1) For the first time, we are going to actually save the edits we make the the dataframe as a new object (parentlong) rather than just printing them. 
+
+2) Next, we will gather columns 11 and 12 so that we have a long (less tidy) dataset. Each individual could now have two rows: one row for the mother, one for the father. The "key" column called parentgender will tell us if the partent in the "value" column is the mother or father. The "value" column will provide the parent name. 
+
+3) Then, we will select the columns id, name, and the new columns we just created.
+
+4) We will filter out the rows where "parentname" is NA for easier example-viewing purposes. 
+
+5) Then, we will order the rows in descending order by ID 
+
+6) We will select the first 40 cases
+
+```{r, define gather}
+parentlong<-cetaceans %>% 
+  gather(.,key = "parentgender", value = "parentname", 11:12) %>%
+  dplyr::select(id, name, parentgender, parentname) %>%
+  filter(!is.na(parentname)) %>% 
+  arrange(desc(id)) %>%
+  head(40)
+
+parentlong %>%
+  head(10)
+```
+* In these examples, I've included the argument names "key=", "value=", etc. Note that just like in base R, you don't have to include argument names so long as you put them in the correct order. 
+
+_Base R equalivalent_
+```{r, define gather Base R}
+# Base R equalivalent:
+
+# parentlong<-cetaceans[,c(3,4,11,12)]
+
+# parentlong<-parentlong[complete.cases(parentlong),]
+
+# new<-c()
+# for(i in 1:nrow(parentlong)){
+#   new<-rbind(new,rbind(c(parentlong$id[i],parentlong$name[i],colnames(parentlong)[3],parentlong$mother[i]),
+#                   c(parentlong$id[i],parentlong$name[i],colnames(parentlong)[4],parentlong$father[i])))
+# }
+# new<-as.data.frame(new)
+# colnames(new)<-c("id","name","parentgender","parentname")
+
+# parentlong<-new
+
+# parentlong<-parentlong[order(parentlong$id,decreasing=TRUE),]
+
+# head(parentlong[complete.cases(parentlong),],n=10)
+```
+
+
+#### **spread** - the inverse of gather: create a wide dataset by spreading columns
+
+Now, we will spread the tibble back to wide form (one row per unique individual). "Parentgender" will become the column names and "parentname" will provide values to those columns. If a value is not present, it will be filled with NA. 
+
+```{r, define spread}
+parentlong %>% 
+  tidyr::spread(key = parentgender,value = parentname, fill = NA) %>% 
+  arrange(desc(id))
+```
+
+_Base R equalivalent_
+```{r, define spread base R}
+# Base R equalivalent:
+  
+# parentlong<-parentlong[order(as.numeric(row.names(parentlong))),]
+
+# parentlong<-data.frame(id=subset(parentlong,parentgender=="father")[,1],
+#               name=subset(parentlong,parentgender=="father")[,2],
+#               father=subset(parentlong,parentgender=="father")[,4],
+#               mother=subset(parentlong,parentgender=="mother")[,4])
+
+# parentlong<-parentlong[order(parentlong$id,decreasing=T),]
+
+# head(parentlong[complete.cases(parentlong),],n=10)
+
+```
+
+
+## Dplyr
+
+Dplyr is maybe the most useful packages in all of R. It provides a few functions that are absolutely essential for data wrangling/transformation. 
+
+* `select()` selecting variables
+
+* `filter()` provides basic filtering capabilities
+
+* `group_by()` groups data by categorical levels
+
+* `summarise()` summarise data by functions of choice
+
+* `arrange()` ordering data
+
+* `join()` joining separate dataframes
+
+* `mutate()` create new variables
+
+There is a handy cheat sheet available here: [Data Wrangling Cheat Sheet](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf)
+
+
+I've already had to use some of the dplyr commands above to accomplish what I wanted to, but let's look at them individually. 
+
+
+#### **select** keep (or drop) columns by name
+
+When working with a large dataframe, sometimes you need to reduce the nubmer of variables and remove a specific one. Select is an easy way to do that.
+
+Here, I removed the pesky (and unnecessary) ID column that read_csv created (one bad feature of readr). 
+The minus sign before the column name denotes that you wish to remove that column. In dplyr, you can refer to columns by their names much more easily. The base equivalent requires you to know the positions of each variable you wish to select or remove, which is easy in this case, but that isn't always true. 
+
+dplyr: select all columns except X1
+```{r, define select except}
+cetaceans %>%
+  dplyr::select(-X1) %>%
+  head(6)
+```
+
+_Base R equalivalent_
+base: select all columns except that in position 1
+```{r select cols in Base R}
+# Base R equalivalent: 
+
+# head(cetaceans[,2:22])
+```
+
+Here, I just selected the species, id, and name of each dolphin. Again, it is more apparent how you're actually transforming the data when you use dplyr. 
+
+dplyr: select all columns between the columns "species" and "name"
+```{r, define select inclusive}
+cetaceans %>% 
+  dplyr::select(species:name) %>%
+  head(6)
+```
+
+_Base R equalivalent_
+base: select all columns between 2:4
+```{r select cols 2 Base R}
+# Base R equalivalent: 
+
+# head(cetaceans[,2:4])
+```
+
+
+#### **select** keep (or drop) columns by a conditional statement
+
+There are also a variety of useful helper functions for select that you can use to make conditional statement. 
+
+dplyr: select the column "name," and any column that ends with the word "Date." 
+```{r, define select conditional}
+cetaceans %>%
+  dplyr::select(name, ends_with("Date")) %>%
+  head(6)
+```
+
+
+You can also use select to rearrange columns. Let's say you make another ID column called "nameID" (created with unite_ of dplyr rather than unite tidyr, which I don't like as well). 
+
+Perhaps you want to rearrange your columns so that your new ID is in the first colum, followed by sex, followed by acquisition, followed by "everything()" to add all other columns in the original order. So you're not deleting any columns, you're just moving them around. 
+
+`rename()`: you can also rename columns in dplyr. The new name is in the first "" and the original name is second. 
+
+
+```{r, define select reorder}
+cetaceans %>%
+  unite_("nameID",c("name","birthYear"),sep = "_") %>% 
+  dplyr::select(nameID, sex, acquisition, everything()) %>%
+  rename("originType" = "acquisition")
+```
+
+_Base R equalivalent_
+```{r, define select reorder base R}
+# Base R equalivalent:
+
+# cetaceans<-data.frame(nameID=paste(cetaceans$name,cetaceans$birthYear,sep="_"),
+#     sex=cetaceans$sex,
+#     acquisition=cetaceans$acquisition,
+#     cetaceans[,-which(colnames(cetaceans) %in%  c("name","birthYear","sex","acquisition"))])
+
+# colnames(cetaceans)[which(colnames(cetaceans)=="acquisition")]<-"originType"
+
+```
+
+
+
+#### **filter** - filters rows by their value
+
+_Important to remember: select is for columns, filter is for rows_
+_Important to remember: you can't use logical rules in select_
+
+The objective here is to reduce the rows/observations by a value critera or other condition. You can apply any of the logical rules in filter. For example: 
+
+|Possible operators| | | |
+|---|---|---|---|
+| < |  Less than                  | !=     | Not equal to     |
+| > |  Greater than               | %in%   | Group membership |
+|== | Equal to                    | is.na  | is NA            |
+|<= | Less than or equal to       | !is.na | is not NA        |
+|>= | Greater than or equal to    | &,l,!  | Boolean operators|
+
+Explanation by line: 
+
+1) First, we are going to repeat the command we created in the select() example to select only the dolphin's name and all four possible date values. 
+
+2) Next, we will filter out all individuals who don't have a status date. !is.na(statusDate)
+
+3) Next we will filter out all inividuals whose transfer date is earlier than 1990 (keep only transfers after Jan 1, 1990). The "filter" command actually works with date values! 
+
+
+```{r, define filter, warning=FALSE}
+cetaceans %>%
+  dplyr::select(name, ends_with("Date")) %>%
+  filter(!is.na(statusDate)) %>%
+  filter(transferDate >= "1990-01-01")
+```
+_Base R equalivalent_
+```{r, define filter base R, warning=FALSE}
+# Base R equalivalent:
+
+# cetaceans<-cetaceans[,c(which(colnames(cetaceans)=="name"),
+#                         which(endsWith(colnames(cetaceans),"Date")))]
+
+# cetaceans<-cetaceans[which(!is.na(cetaceans$statusDate)),]
+
+# cetaceans[which(cetaceans$transferDate>="1990-01-01"),]
+```
+
+
+#### **group_by** - groups data by categorical levels
+
+
+#### **summarize or summarise** - summarise data by functions of choice
+
+We will talk about these together because there isn't much use to grouping data by a categorical variable if you're not going to transform or summarize it in some way. 
+
+`group_by` allows us to create/nest categorical groupings of data by factor levels and preform analysis at the group as well as the individual level
+
+`summarize` allows us to easily calculate summary statistics. You can use functions such as min, median, var, sd, n and many more
+
+_Explanation by line:_ 
+
+1) We'll talk more about the mutate function later, but for now, all you need to know is that we want to convert birthYear to a numeric variable (double) because it was read in as a character for some reason
+
+2) Next, use filter to consider only those dolphins which were "born" or "captured
+
+3) We group by acquisition and sex, pretty self-explanatory
+
+4) We can use the variety of functions in summarize to create a summary dataframe from our original dataset. Note, this dataframe will "overwrite" your original dataset if you save it as the same object name. For example, you'd want to name this acq_summary_table or something. 
+We are telling summarize to count (n) the number in each group and take the mean of the birth years for each group. Note that we passed "na.rm" to the mean function (just like you normally would) so that it doesn't return NA values. 
+
+5) Finally, we used mutate_at to round to the nearest whole number (because partial years aren't very informative). 
+
+```{r, define group_by and summarize, warning=FALSE}
+cetaceans %>%
+  mutate(birthYear = as.double(birthYear)) %>% 
+  filter(acquisition == "Born" | acquisition == "Capture") %>% 
+  group_by(acquisition, sex) %>%
+  summarize(n = n(), avgBirthYear = mean(birthYear,na.rm = TRUE),sumBirth = sum(birthYear,na.rm = TRUE)) %>%
+  mutate_at("avgBirthYear", round, 0)
+```
+
+#### **arrange** - orders observations by value of interest
+
+Sometimes it is helpful to rank observations or summaries by the value of a variable. The arrange function allows us to order data by variables in accending or descending order.
+
+`count` is does the same thing as summarize n=n(). However, count takes the grouping variable as the arguement, but n=n() doesn't take any arguments and relies on group_by to know how to count.
+
+```{r define arrange, warning=FALSE}
+cetaceans %>%
+  filter(!is.na(birthYear)) %>% 
+  count(birthYear) %>%
+  arrange(desc(n)) %>%
+  head(10)
+```
+
+Ignore this step. It makes a dataframe that contains each transfer location by ID. 
+
+```{r,create transfersdf, echo=FALSE, warning=FALSE}
+transfersdf<- cetaceans %>%
+  dplyr::select(id,transfers) %>% 
+  mutate(transfers = as.character(transfers)) %>%
+  unnest_tokens(each_transfer, transfers, token = stringr::str_split, pattern = " to ") %>%
+  filter(!is.na(each_transfer)) %>%
+  group_by(id) %>%
+  mutate(transfernumber = paste("t",seq(length(id)),sep="")) %>%
+  spread(transfernumber, each_transfer) %>%
+  dplyr::select(id,t1,t2,t2,t3,t4,t5,t6,t7,t8,t9,t10,t11,t12,t13,t14)
+
+transfersdf %>%
+  arrange(desc(id)) %>%
+  head(10)
+```
+
+#### **join** - join two datasets together
+
+The join function is very helpful to joint two dataframes together that may have a different structure or different variables, but observations for the same individuals, etc. You can use the "join" functions to combine them by a common value or group of values. 
+
+There are four types of join: 
+
+* `inner_join()`: Include only rows in both x and y that have a matching value
+
+* `left_join()`: Include all of x, and matching rows of y
+
+* `semi_join()`: Include rows of x that match y but only keep the columns from x
+
+* `anti_join()`: Opposite of semi_join
+
+
+```{r, define join, warning=FALSE}
+cetaceans %>%
+  left_join(.,transfersdf,by = "id") %>%
+  dplyr::select(id,species,name,sex,starts_with("t")) %>% 
+  head(6)
+```
+
+
+#### **mutate** - create new variables
+
+Mutate is an extremely useful function. You can use it to create a new variable that is a function of the current variables, add a new variable, etc. 
+
+In this example, we will calculate a variable containing the dolphin's age. 
+
+_Explanation by line:_ 
+
+1) Only include individuals whose status == "Died"
+
+2) Only include individuals with a birthYear and statusDate
+
+3) Select "id", "status_date", and "birthYear" columns
+
+4) Convert the column "birthYear" to a double
+
+5) Create a new column called "deathYear" that uses the lubridate package to extract "year" from "statusDate"
+
+6) Create a new column called "age" that = difference between death year and birth year
+
+```{r, define mutate, warning=FALSE}
+age_df<-cetaceans %>%
+  filter(status == "Died") %>%
+  filter(!is.na(birthYear), !is.na(statusDate)) %>%
+  dplyr::select(id,statusDate,birthYear) %>% 
+  mutate(birthYear = as.double(birthYear)) %>% 
+  mutate(deathYear = year(statusDate)) %>%
+  mutate(age = deathYear - birthYear) 
+
+age_df %>% head()
+```
+
+#### **top_n** - select the most common cases
+
+_Explanation by line:_ 
+
+1) Remove the "-" and NA values from cause of death column
+
+2) Convert the COD column to all lowercase text
+
+3) Count the number in each COD group 
+
+4) Select the top 10 columns
+
+5) Arrange in descending order by n
+
+```{r top_n, warning=FALSE, message=FALSE}
+cetaceans %>%
+  filter(!is.na(COD), 
+         COD != "-") %>%
+  mutate(COD = tolower(COD)) %>%
+  count(COD) %>%
+  top_n(10) %>%
+  arrange(desc(n))
+```
+
+
+
+## ggplot2
+
+To review the basic ggplot syntax structure, we'll use the gapminder dataset. Use a tidy command to glimpse this dataset: 
+
+```{r glimpse gapminder dataset}
+gapminder %>%
+  glimpse()
+```
+
+The tidyverse relies upon the package **ggplot2** for data visualization. The package, based on “The Grammar of Graphics”, embodies a deep philosophy of visualization to declaratively create graphics. After providing the data, you tell ggplot2 how to map variables to aesthetics, then add layers, scales, faceting specifications, or coordinate systems. Not only is ggplot more concise than base graphics, it also allows you more creative freedom and greater control over your visualizations. It also allows you to expedite your data exploration process by speeding up the run time of your plotting (i.e., no more loops). 
+
+Here is an example of the superior qualities of ggplot. 
+
+#### _This plot took approximately 2 minutes_
+
+```{r ggplot fig}
+ggplot(gapminder, aes(x = gdpPercap, y = lifeExp)) +
+  geom_jitter(shape = 1, aes(color = continent)) +
+  stat_smooth(method = "lm", size = 1, color = "black") +
+  scale_x_log10() + 
+  xlab("Per Capita GDP") + 
+  ylab("Life Expectancy (yrs)") +
+  facet_wrap(~continent) +
+  theme_few() + 
+  guides(color = FALSE)
+```
+
+#### _This (slightly inferior) plot took approximately 30 minutes_
+
+See excessive loop requirements. 
+
+```{r base r fig}
+gapminder <- as.data.frame(gapminder)
+conts <- sort(unique(gapminder[,"continent"]),decreasing = F)
+cols <- scales::hue_pal()(length(conts))
+par(mfrow = c(2,3))
+counter <- 1
+for (i in conts) {
+  plot(gapminder[which(gapminder$continent == i), "gdpPercap"],
+       gapminder[which(gapminder$continent == i), "lifeExp"], col = cols[counter],
+       xlab = "Per Capita GDP", ylab = "Life Expectancy (yrs)",
+       main = i, las = 1, log = "x")
+  fit <- lm(gapminder[which(gapminder$continent == i), "lifeExp"] ~ log(gapminder[which(gapminder$continent == i), "gdpPercap"]))
+  pred <- predict(fit, interval = "confidence")
+  lines(sort(gapminder[which(gapminder$continent == i), "gdpPercap"]), sort(pred[,1]))
+  lines(sort(gapminder[which(gapminder$continent == i), "gdpPercap"]), sort(pred[,2]), lty = 2)
+  lines(sort(gapminder[which(gapminder$continent == i), "gdpPercap"]), sort(pred[,3]), lty = 2)
+  counter <- counter + 1
+}
+```
+
+
+### ggplot2 Grammar
+
+This package uses a much different syntax than base plotting, and I think its this fairly opaque syntax that prevents people from learning to use ggplot in the first place. Once you understand what the functions do, its very simple to build a plot.
+
+Here are the basics:
+
+* **data** - your data must be a dataframe or a tibble 
+
+* **aesthetics** - the mapping that defines how your data is represented visually (x, y, color, size, shape, transparency) 
+
+* **geometries** - the objects added to the plot in layers (points, bars, lines)
+
+* **stats** - statistical transformations/data summaries
+
+* **facets** - subsetting and automatic plotting by a factor
+
+* **scales** - control color mapping and other aesthetic alterations
+
+* **themes** - themes allow you to customize every aspect of the plot
+
+* **coordinates** - there are a few different coordinate systems you can use
+
+
+
+| **grammar** | **prefix** | **example** |
+|---|---|---|
+|data | ggplot() | ggplot()
+|aesthetics | aes() | ggplot(data,aes(x,y))| 
+|geometries| geom | geom_point() |
+|stats | stat | stat_boxplot() | 
+|facets | facet | facet_wrap()| 
+|scales | scale | scale_color_brewer() |
+|themes | theme | theme_bw() |
+|coordinates | coord | coord_polar() |
+
+
+#### Step 1: Call ggplot and define the "global" settings
+
+* Specify the data and variables inside the ggplot function
+
+* If you only call the ggplot function without adding any geometries, it will create a blank plot (much like calling type = "n" in base plotting). 
+
+* Everything in the aesthetics inside ggplot() are "global aesthetics," which means they will be applied to the entire plot (including all geometries/stats/facets). However, they will not be visible until you add those geoms, etc. 
+
+You can think of the ggplot() function as the base of the pyramid. From the base function, you'll use plus signs (+) and geoms, scales, and themes to build your plot from the ground up. 
+
+_Note:_ The ggplot function will decide for you what your x and y limits should be, based on the data you put in the global settings. You can definitely change these limits, and we'll discuss this later on. 
+
+`Base equivalent: plot(gapminder$year, gapminder$pop, type = "n")`
+
+```{r define data, fig.width=5, fig.height=4}
+ggplot(data = gapminder, aes(x = year, y = pop))
+```
+
+#### Step 2: Add geometries
+
+You can add a variety geometries to create different types of plots. Check out the [ggplot() Cheat Sheet](https://www.rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) for helpful functions.
+
+**VERY IMPORTANT POINT:** If you define the aesthetics in the ggplot() command, the geoms don't require any arguments, but you can always add layer-specific aesthetics (see size = 2).
+
+_Popular geometries and their syntax_
+
+* geom_histogram(aes(x))
+
+* geom_bar(aes(x,y),stat = "identity")
+
+* geom_point(aes(x,y)) or geom_jitter(aes(x,y))
+
+* geom_line(aes(x,y))
+
+* geom_smooth(model = lm)
+
+* geom_boxplot(aes(x,y)) with stat_boxplot(geom ='errorbar')
+
+* geom_errorbar(aes(ymin=mean-se,ymax=mean+se))
+
+* geom_area()
+
+* geom_polygon()
+
+
+A few examples:
+
+```{r add geoms, fig.width=7.5, fig.height=3.5}
+p1<-ggplot(data = gapminder, aes(x = year, y = pop, color = continent)) + geom_point(size = 2) + 
+  theme(legend.position = "bottom")
+
+p2<-ggplot(data = gapminder, aes(x = year, y = pop, color = continent)) + 
+  geom_smooth(method = "lm",se = FALSE) + theme(legend.position = "bottom")
+
+gridExtra::grid.arrange(p1,p2, ncol = 2)
+```
+
+#### Exercise:
+
+1) See what happens when you add geom_line() or geom_smooth() with no arguments. 
+
+2) Put size = 2 in the ggplot function (but outside the aes()), then see what happens when you add geom_line(). 
+
+```{r exercise 1}
+ggplot(data = gapminder, aes(x = year, y = pop, color = continent)) + geom_point(size = 2)
+```
+
+
+_To reiterate,_ if you define the aesthetics in the ggplot command, they will be applied to any geometries you add (like in the example plots). You can also define variables and aesthetics inside the individual geoms, but these settings will only be applied to that layer.
+
+In this example, we have added a "smooth" line, but because there are no global aethetics and no local arguements, there is nothing for this layer to do. 
+
+Here is an atrocious plot to demonstrate:
+```{r global versus local aesthetics}
+ggplot() + geom_point(data = gapminder, aes(x = gdpPercap, y = lifeExp, color = continent, shape = continent)) + scale_x_log10() + 
+  geom_smooth() 
+```
+
+
+
+#### Arguments inside geoms
+
+Once you've added the geoms you want, you can make those geoms look however you want using the arguments inside those geoms. See the options by running the help code below and scrolling down to "Aesthetics." 
+
+```{r aes help}
+help("geom_point")
+```
+
+Here is a brief summary of what those arguments do:
+
+| **argument** |**location** |**use** | **example** |
+|---|---|---|---|
+|alpha | outside aes() | changes transparency of your plotted object | alpha = 0.5 (50% transparent) |
+|color/colour | inside aes() | change the color of your point/line/outline based on a continuous or categorical variable | color = continent |
+|color/colour | outside aes() | set the exact color of your point/line/outline | color = "blue" or color = "#556832"|
+|fill| inside aes() | change the fill of your barplot, boxplot, area plot, polygon based on a continuous or categorical variable | fill = continent |
+|fill| outside aes() | set the exact fill of your barplot, boxplot, area plot, polygon | fill = fill = "blue" or fill = "#4285f4" |
+|group | inside aes() | add a grouping variable without changing the color/fill | group = continent |
+|shape| inside aes()| allow the shape of your points to change according to a categorical variable | shape = country|
+|shape| outside aes() | set the exact shape of all points in your dataset | shape = 2 |
+|size | inside aes() | allow the size of your geom to vary by a continuous variable (will use identity of the set variable as size) | size = population|
+|size| outside aes() | set the size of your geom to a specific size, will be applied to all data | size = 3 |
+|stroke| outside aes() | this command will modify the width of the border of your geom | stroke = 2 | 
+|width| outside aes() | this command will modify the width of a boxplot or barplot | width = 0.6 | 
+
+_Note:_ When you set agrguments inside the aesthetics to be based on continuous or categorical variables, you won't use quotation marks around them. Also, ggplot will assign stock colors to them. If you want to customize your color palette, you'll do so using a scale. We'll discuss this later. When you set argument outside the geom's aes(), you'll need to specify an exact value like "black" or 2. FOr colors, use quotations, for anything that uses a number, don't surround it with quotations. 
+
+
+```{r, aes inside versus outside, message = FALSE, warning=FALSE}
+gapminder %>% 
+  filter(country == "United States" | country == "China"| country == "India") %>% 
+  ggplot(aes(x = year, y = pop,color = country)) + geom_point(aes(size = lifeExp)) + geom_line() +
+  labs(title = "Arguments inside aes()")
+
+
+
+gapminder %>% 
+  filter(country == "United States" | country == "China"| country == "India") %>% 
+  ggplot(aes(x = year, y = pop,group = country)) + geom_point(color = "#4285f4",size = 3)  + geom_line(color = "#4285f4") +
+  labs(title = "Arguments outside aes()")
+```
+
+
+#### Exercise:
+
+1) In the first plot in the chunk above, see what happens when you move the size argument to the ggplot function aes() - hint... not what we want. 
+
+2) In the second plot, see what happens when you remove "group = country" from the ggplot function aes(). 
+
+
+#### Step 3: Add stats
+
+Some plots visualize a transformation of the original data set. Use a stat to choose a common transformation to visualize. 
+
+Because ggplot boxplots don't automatically come with whiskers, I've added "stat_boxplot(geom = 'errorbar')" to the plot first to create those. 
+
+Then, I layered on a regular stat_boxplot. Note that I used "fill" rather than "color." The "color" command controls lines and points and the "fill" command controls areas. Note that I can also control the width of the errorbar and the boxplot seperately because I didn't put width in the global aesthetics (I did this because I wanted the whiskers to be narrower than the boxes). 
+
+
+`Base equivalent: boxplot(gapminder$lifeExp ~ gapminder$year)`
+
+```{r add stats 1, fig.width=6, fig.height=4}
+ggplot(data = gapminder, aes(x = as.factor(year), y = lifeExp)) + 
+  stat_boxplot(geom = 'errorbar', width = 0.4) + stat_boxplot(fill = "lightgray", width = 0.6)
+```
+
+_Note:_ Boxplots do not like continuous variables on the x axis. You can see what ggplot defaults to when you put in a continuous x without changing it to a factor, or adding a grouping variable. 
+
+In the second plot, I added group = year, which fixes the problem. Depending on the range of the continuous variable, sometimes its better to use as.factor() to coerce the x to categorical than to employ a grouping variable. Try both, and see what works best for your data.
+
+```{r add stats2, fig.width=6, fig.height=4}
+ggplot(data = gapminder, aes(x = year, y = lifeExp)) + 
+  stat_boxplot(geom = 'errorbar', width = 0.4) + stat_boxplot(fill = "lightgray", width = 0.6)
+
+ggplot(data = gapminder, aes(x = year, y = lifeExp, group = year)) + 
+  stat_boxplot(geom = 'errorbar', width = 0.8) + stat_boxplot(fill = "lightgray")
+```
+
+
+#### Step 4: Add facets to visualize differences between categorical variables
+
+We will use some of our previous dplyr skills to wrangle this data before we plot it. 
+
+I am only interested in looking at North America right now, so we will filter out all countries except Can, USA, and Mex. 
+
+Because we are using the dplyr pipe to call on the data, we don't have to have the "data" argument, but we will pass x = year, y = population to the global aesthetic and layer on our geometries. Note that if we want to "group by" without changing the colors, we can call "group = factorlevel" in the global aesthetics. 
+
+Finally, we want to add a facet so each country has its own plot area.
+
+* `facet_wrap()` - wraps facets by one factor level into a rectangular layout (can still specify the number of rows/columns desired)
+
+* `facet_grid()` - can facet into both rows and columns by two different factor levels (perhaps continent rows, country columns?)
+
+```{r facet plots, fig.width=7.5, fig.height=2.5}
+gapminder %>%
+  filter(country %in% c("Canada","United States","Mexico")) %>% 
+  group_by(country) %>% 
+  ggplot(aes(year,pop, group = country)) + 
+  geom_smooth(method = "lm",se = FALSE, color = "lightgray") + geom_point() + 
+  facet_wrap(~country)
+```
+
+#### Exercise:
+
+Create a plot using the gapminder data that uses at least one geom, has one aesthetic such as color or size, and facet by a variable. 
+
+```{r}
+gapminder %>% 
+  glimpse()
+```
+
+
+#### Step 5: Use themes and scales to adjust settings and make plots beautiful!
+
+##### **Themes:**
+
+You can adjust most of the in/around the plot formatting using themes. Inside the theme() function, you'll put in the element you'd like to modify, followed by =, and then the element call. For text, you'll use element_text(), but for other types of objects there are also element_grob/line/rect(). The other common element command you'll use is element_blank(). Anytime you assign something to element_blank(), it is "deleted/removed/blank". For example, to remove the legend title, you'd write theme(legend.title = element_blank()), but to increase the size of the lengend title, use theme(legend.title = element_text(size = 14))
+
+_Functions I use most for formatting:_
+
+* theme_bw(), theme_classic(), theme_few(), theme_light() are all good ways to get rid of the majority of "annoying" ggplot formatting like the grey background
+
+* theme(panel.grid = element_blank()) this is how you get rid of the gridlines. 
+
+* labs(x = "", y = "", title = "", color/fill/shape/etc = "") change the axis labels all in one command
+
+* theme(axis.text = element_text(size = XX)) change the size of the axis labels for pub-ready plots
+
+
+Let's add some themes to make a plot that's a little more publication or presentation friendly. 
+
+```{r top emitters pretty, message=FALSE, fig.width=6, fig.height=4}
+#create a vector of countries who emit the most CO2
+topemitters<-c("China", "United States","India","Japan","Germany", "Korea, Dem. Rep.")
+
+#create a smaller dataset that only includes the top emmitting countries
+topemittersdf<- gapminder %>%
+  filter(country %in% topemitters) %>% 
+  group_by(country)
+
+#base ggplot with no scales, themes, other formatting
+ggplot(topemittersdf, aes(year, gdpPercap, color = country)) +     
+  geom_smooth(se = FALSE, color = "lightgray") +                    
+  geom_point(size = 1.4) +                                         
+  facet_wrap(~forcats::fct_reorder2(country, year, gdpPercap))
+
+#publication formatted ggplot
+ggplot(topemittersdf, aes(year, gdpPercap, color = country)) +     # bottom of the pyrimid (set gloal settings)
+  geom_smooth(se = FALSE, color = "lightgray") +                   # add a smoothed loess line 
+  geom_point(size = 1.4) +                                         # add points, make the points a little larger
+  facet_wrap(~forcats::fct_reorder2(country, year, gdpPercap)) +   # facet plot by country and order by gdpPercap
+  scale_x_continuous(breaks = pretty_breaks(n = 3)) +              # on x axis, use only three breaks so text isn't scrunched
+  scale_colour_brewer(palette = "RdBu")  +                         # use a premade palette to color points
+  labs(x = "\n Year", y = "Per capita GDP \n ") +                  # rename x and y axis labels
+  theme(panel.grid = element_blank()) +                            # remove the gridlines
+  theme(legend.position = "none") +                                # remove the color legend
+  theme(strip.text = element_text(size = 12, color = "black")) +   # make the facet (strip) text larger and colored black
+  theme(strip.background = element_blank()) +                      # remove the grey box behind the facet strip background
+  theme(axis.text = element_text(size = 12), axis.title = element_text(size = 14))    # change axis text size
+  
+```
+
+
+##### **Scales:**
+
+_Use with any aesthetic: alpha, color, fill, linetype, shape, size:_
+
+* scale_*_continuous() - map continuous values to visual values
+
+* scale_*_discrete() - map discrete values to visual values
+
+* scale_*_identity() - use data values as visual values
+
+* scale_*_manual(values = c()) - map discrete values to manually-chosen visual values
+
+_Color and fill scales:_
+
+* scale_fill/color_brewer(palette = "Greys") - use Rcolorbrewer
+
+* scale_fill/color_gradient(low = "blue", high = "yellow") - use a gradient between specied values (*usually for continuous vars only)
+
+_Location scales:_
+
+* scale_x_date - x values as dates
+
+* scale_x_log10 or scale_x_sqrt() -  transform axis
+
+* scale_x/y_continuous(limits = c()) - define limits with clipping
+
+
+Find a complete compilation of R color palettes [here](https://github.com/EmilHvitfeldt/r-color-palettes)
+
+Most importantly, you can preview and subsequently use Wes Anderson palettes. 
+```{r moonrise kingdom, fig.width=3, fig.height=2}
+#install.packages("wesanderson")
+library(wesanderson) 
+wes_palette("Moonrise3")
+```
+
+Here is an example of a few different scales. You can put variables on a log scale without modifying them in your dataframe. You can set the limits of your plot. You can even color continuous variables by defining a gradient. 
+
+```{r scale example, warning=FALSE, fig.width=6, fig.height=4}
+gapminder %>% 
+  filter(continent == "Africa") %>% 
+  ggplot(aes(x = gdpPercap, y = lifeExp, color = lifeExp)) + 
+  geom_point() + scale_x_log10() + scale_y_continuous(limits = c(30,70)) + 
+  scale_color_continuous(low = wes_palette("Zissou1")[1], high = wes_palette("Zissou1")[4])
+```
+
+#### Step 6: Change coordinate systems
+
+The coordinate commands allow you to flip x and y axes while maintaining the structure of the plot (coord_flip) OR use different coordinate systems (coord_cartesian and coord_polar).
+
+```{r, warning=FALSE, fig.width=6, fig.height=4}
+growthdata<-gapminder %>% 
+  filter(country %in% topemitters) %>% 
+  dplyr::select(country,year,pop) %>% 
+  group_by(country) %>% 
+  mutate(difference = pop - lag(pop)) %>% 
+  mutate(percentgrowth = difference/pop) %>%
+  group_by(country) %>% 
+  summarize(meangrowth = mean(percentgrowth, na.rm = TRUE), sd = sd(percentgrowth, na.rm = TRUE)) %>% 
+  mutate(country = fct_reorder(country, meangrowth))
+
+ggplot(growthdata, aes(x = country, y = meangrowth,color = country)) + 
+  geom_point(size = 2.5) +
+  geom_errorbar((aes(ymin=meangrowth-sd,ymax=meangrowth+sd)),width = 0.3) + 
+  coord_flip() +                                                   # flip the x and y axis
+  labs(x = "", y = "Five year population growth rate") +           # add axis labels - note names still coordinate with original axes
+  theme(panel.grid = element_blank()) +                            # remove grid
+  theme(legend.position = "none") +                                # remove legend
+  scale_color_viridis(discrete = TRUE, direction = -1) +           # use discrete viridis
+  theme(axis.title = element_text(size = 12), axis.text = element_text(size = 12))
+```
+
+
+##### don't try this at home/use only if you _absolutely_ must.... 
+
+_Disclaimer: The author of this document does not condone the use of pie charts._ 
+
+The only appropriate use of pie charts is in Semi-rad comics, but please find an example of how to manually color items in ggplot. I wanted to color each country by the primary color of their flag, so I created a vector of colors that I named "Nordicflags." I then called scale_fill_manual and used "Nordicflags" as the value. Note that when assigning colors manually, your vector needs to be either length = 1 or the same length as the number of factor levels you're grouping by. 
+
+```{r nordic pie, fig.width=6.5, fig.height=4}
+Nordicflags<-c("#C60C30","#002F6C","#006AA7","#EF2B2D","#FECC00")
+
+gapminder %>%
+  filter(country %in% c("Sweden","Norway","Finland", "Denmark","Iceland")) %>% 
+  filter(year == 2007) %>% 
+  mutate(proportion = pop/sum(pop)) %>% 
+  ggplot(aes(x = "", y = proportion, fill = country)) + 
+  geom_bar(stat = "identity") + 
+  coord_polar("y", start=0) + scale_fill_manual(values = Nordicflags) + 
+  theme_minimal() + theme(axis.text = element_blank()) +
+  labs(title = "Nordic Countries", x = "", y = "Proportion of population by country", fill = "") 
+```
+
+
+#### Other things to know: Area plots can be useful. 
+
+For demonstrating changes in proportions over time, area plots can be a useful alternative to a "pie chart time series." 
+
+```{r}
+cetaceans %>%
+  filter(originDate >= "1960-01-01") %>%
+  count(acquisition,
+        decade = 10 * (year(originDate) %/% 10)) %>%
+  complete(acquisition, decade, fill = list(n = 0)) %>%
+  mutate(acquisition = fct_reorder(acquisition, n, sum)) %>%
+  group_by(decade) %>%
+  mutate(percent = n / sum(n)) %>%
+  ggplot(aes(decade, percent, fill = acquisition)) +   # base of pyramid
+  geom_area() +                                        # don't need any arguments in geom_area
+  scale_y_continuous(labels = percent_format()) +      # convert y axis to percentages
+  theme_minimal() +                                    # use a minimal theme
+  labs(x = "year",                                     # change axis labels
+       y = "% of dolphins recorded")
+```
+
+
+#### Other things to know: Barplots require attention. 
+
+You can't just throw down geom_bar() and expect it to work. There are a few things to remember:
+
+_Stacking option_
+Use stat = "identity" to allow stacking. 
+```{r stack bar, fig.width=6.5, fig.height=4}
+gapminder %>%
+  filter(country %in% c("Sweden","Norway","Finland", "Denmark","Iceland")) %>% 
+  ggplot(aes(x = as.factor(year), y = pop, fill = country)) + geom_bar(stat = "identity") + 
+  scale_fill_manual(values = Nordicflags) 
+```
+
+_Dodging option_
+Use stat = "identity" , position = "dodge" to give each factor level its own bar 
+```{r dodge bar, fig.width=6.5, fig.height=4}
+gapminder %>%
+  filter(country %in% c("Sweden","Norway","Finland", "Denmark","Iceland")) %>% 
+  filter(year < 1955 | year > 2005) %>% 
+  ggplot(aes(x = as.factor(year), y = pop, fill = country)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  scale_fill_manual(values = Nordicflags) 
+```
+
+_Lack of summary problem_
+
+Let's talk about what is happening here: because we have an unplotted factor level/repeated measure, the barplots associated with these values are being layered below and you're only observing the maximum value. We can see this here because I've made the bar color almost totally transparent (alpha). 
+
+When making barplots, it is always best to summarize your data first. 
+```{r layer bar, fig.width=6.5, fig.height=4}
+gapminder %>%
+  filter(country %in% c("Sweden","Norway","Finland", "Denmark","Iceland")) %>% 
+  ggplot(aes(x = country, y = pop)) + 
+  geom_bar(stat = "identity", position = "dodge",color = "black", alpha = 0.01) 
+```
+
+This isn't exactly the right sitaution for this type of plot, but we will pretend for example's sake. 
+
+Once you've summarized the values, you can use `geom_col()` rather than `geom_bar()`. R documentation says:
+
+>There are two types of bar charts: geom_bar() and geom_col(). geom_bar() makes the height of the bar proportional to the number of cases in each group (or if the weight aesthetic is supplied, the sum of the weights). If you want the heights of the bars to represent values in the data, use geom_col() instead. geom_bar() uses stat_count() by default: it counts the number of cases at each x position. geom_col() uses stat_identity(): it leaves the data as is.
+
+Please note that I also left the transparency intact so you could see that, with the summarized data, the bars are no longer layered.
+
+In this example, I also used the `forcats::fct_reorder()` function to order the bars by the value of another variable (mean population) in this case. 
+```{r error bar, fig.width=6.5, fig.height=4}
+gapminder %>%
+  filter(country %in% c("Sweden","Norway","Finland", "Denmark","Iceland")) %>% 
+  group_by(country) %>% 
+  summarize(popmean = mean(pop), sd = sd(pop)) %>% 
+  ggplot(aes(x = fct_reorder(country,popmean), y = popmean)) + 
+  geom_col(position = "dodge",color = "black", alpha = 0.01) + 
+  geom_errorbar(aes(ymin = popmean - sd, ymax = popmean + sd), width = 0.3) + 
+  theme(panel.grid = element_blank()) + 
+  labs(x = "", y = "Population by country (1952 - 2007)")
+```
+
+
+#### Other things to know: Ribbons for TS.
+
+Ribbon is a great geom to know for time series analyses. 
+
+```{r read ribbon, message=FALSE}
+ribbon<-read_csv("https://raw.githubusercontent.com/LGCarlson/Intro-to-Tidyverse/master/ribbon_example.csv") %>%  glimpse()
+```
+
+Much like the errorbar geoms, geom_ribbon requires a ymin and ymax argument (you must supply). 
+
+```{r ribbbon plot, fig.width=6, fig.height=4}
+ggplot(ribbon,aes(time,value)) + 
+  geom_ribbon(aes(ymin = value - variablility , ymax = value + variablility ), 
+              fill = "#2171b5", alpha = 0.2) + geom_line(color = "#08519c")
+```
+
+You can also do the same thing with lines, but the fill ribbon provides looks nicer. 
+
+```{r rib line, fig.width=6, fig.height=4}
+ggplot(ribbon, aes(time, value)) +
+  geom_line(aes(y = value - variablility, x = time), color="grey", linetype=2) +
+  geom_line(aes(y = value + variablility, x = time), color="grey", linetype=2) +
+  geom_line(color = "black") + theme(panel.grid = element_blank())
+```
+
+
+
+#### Other things to know: Plot polygons not only on maps, but in any time of ggplot plot. 
+
+Create the dataframe for a rectancular polygon.
+
+```{r}
+polygondata<-tribble(
+  ~x, ~y, 
+  50, -2, 
+  50, 16,
+  150, 16,
+  150, -2
+)
+
+```
+
+To call upon two difference sources of data within the same ggplot, leave the ggplot() function blank and specify the data and x,y aesthetics within the geom. 
+
+Add geom_polygon first if you want it to be behind your plot objects.
+
+Then add your figure data as you normally would.
+
+```{r rib line, fig.width=6, fig.height=4}
+ggplot() +
+  geom_polygon(data = polygondata,aes(x = x, y = y), fill = "lightgrey", alpha = 0.4) +
+  geom_line(data = ribbon, aes(x = time, y = value),color = "black") + theme(panel.grid = element_blank())
+```
+
+
+#### Other things to know: Use geom_text() and annotate() to add text to your plot. 
+
+```{r}
+ggplot() +
+  geom_polygon(data = polygondata,aes(x = x, y = y), fill = "lightgrey", alpha = 0.4) +
+  geom_line(data = ribbon, aes(x = time, y = value),color = "black") + theme(panel.grid = element_blank()) + 
+  annotate(geom = "text", x = 100, y = 0, label = "Positive NAO", size = 7, color = "darkgrey")
+```
+
+```{r}
+gapminder %>%
+  filter(country %in% c("Sweden","Norway","Finland", "Denmark")) %>% 
+  group_by(country) %>% 
+  mutate(difference = pop - lag(pop)) %>% 
+  mutate(percentdiff = difference/pop) %>% 
+  mutate_at(8,round,2) %>% 
+  ggplot(aes(x = as.factor(year), y = pop, fill = country, label = percentdiff)) + 
+  geom_bar(stat = "identity") + 
+  geom_text(stat = "identity", position = "stack", size = 3, vjust = 2) +
+  scale_fill_manual(values = c(Nordicflags[1],Nordicflags[2],Nordicflags[4],Nordicflags[5])) 
+```
+
+
+
+## Lindsay's Figure Faux Pas and Pet Peeves
+
+1) Please DON'T use red and green in the same plot. There are many other color options and a variety of colorblind-friendly premade palettes such as viridis. You can see "colorblind-friendly" palettes here http://colorbrewer2.org/#type=diverging&scheme=RdBu&n=3 
+
+2) DO increase the size of your axis labels for figures going in publications or presentations so people can actually see them. 
+
+3) DON'T use pie charts (especially please don't put pie charts on top of maps). Do calculate proportions and use stacked bars = 1.00 instead. This way, you can actually compare trends among years/groups/etc. 
+
+4) If you have many overlapping points (for example you have a continuous variable like "length" but rounded to whole numbers), DO jitter your points and change the transparency so you can distinguish overlapping points. Use geom_jitter() to do this. 
+
+
+
+
+## Mapping with ggplot and the sf package
+
+
+```{r}
+ufodata<-read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-06-25/ufo_sightings.csv") %>% 
+  filter(country == "ca")
+```
+
+There is such a thing as "ggmap", but I don't honestly recommend it. This is what you can do:
+
+
+
+```{r}
+bbox<-c(left = -140, bottom = 41, right = -52, top = 74)
+library(ggmap)
+ggmap(get_stamenmap(bbox, zoom = 4,maptype = "terrain-lines")) + geom_point(data = ufodata,aes(x = longitude, y = latitude), size = 2, alpha = 0.6)
+```
+
+Takes forever, and doesn't look great. Feel free to play around with different types of basemaps, but it really is not up to par with what you want for you GIS purposes. 
+
+The sf (spatial features) package allows you to make a much higher quality maps. 
+
+```{r intro to sf, message=FALSE, warning = FALSE}
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+ggplot(data = world) +
+    geom_sf() + coord_sf(xlim = c(-140, -54), ylim = c(40,70), expand = FALSE) + 
+  geom_point(data = ufodata,aes(x = longitude, y = latitude, color = state), size = 2, alpha = 0.6)
+
+```
+
+You can also easily make simple heatmaps. 
+
+```{r heatmaps}
+countsbyboxes<-ufodata %>% 
+  mutate(latbox = 1 * latitude %/% 1) %>% 
+  mutate(longbox = 1 * longitude %/% 1) %>% 
+  group_by(latbox,longbox) %>% 
+  dplyr::summarise(n = n())
+
+
+ggplot(data = world) +
+    geom_sf() + coord_sf(xlim = c(-140, -54), ylim = c(40,70), expand = FALSE) + 
+  geom_tile(data = countsbyboxes,aes(x = longbox, y = latbox, fill = n), alpha = 0.6) + 
+  scale_fill_viridis()
+
+```
+
+You can also use the pre-existing density function to calculate a density contour around the data.
+
+```{r densitymap}
+ufoshapes <- ufodata %>% 
+  filter(ufo_shape == "light" | ufo_shape == "circle" | ufo_shape == "triangle")
+  
+ggplot(data = world) +
+    geom_sf() + coord_sf(xlim = c(-140, -54), ylim = c(40,70), expand = FALSE) + 
+  stat_density2d(data = ufoshapes,aes(x = longitude, y = latitude),colour = "black", alpha = 0.6) + 
+  geom_point(data = ufoshapes, aes(x = longitude, y = latitude)) + facet_wrap(~ufo_shape)
+```
+
+You can do spatial analyses and add them onto sf maps. This is also true for raster layers or spatial polygons that you get from elsewhere. 
+
+```{r kernels}
+ufodata2<-ufodata %>% 
+  filter(!is.na(state), 
+         state == "ab" | state == "bc" | state == "mb")  
+
+data.xy = ufodata2[c("longitude","latitude")]
+
+xysp <- SpatialPoints(data.xy)
+proj4string(xysp) <- CRS("+init=epsg:4326")
+
+sppt<-data.frame(xysp)
+udhref05 <- kernelUD(xysp, h = "href", grid = 200, same4all = TRUE, hlim = c(0.1, 1.5), kern = c("bivnorm"), extent = 0.5)
+
+uds50 <- fortify(getverticeshr(udhref05, percent = 50))
+uds75 <- fortify(getverticeshr(udhref05, percent = 75))
+uds90 <- fortify(getverticeshr(udhref05, percent = 90))
+uds95 <- fortify(getverticeshr(udhref05, percent = 95))
+
+ggplot(data = world)  + geom_sf() + coord_sf(xlim = c(-140, -54), ylim = c(40,70), expand = FALSE) + geom_polygon(data = uds95, aes(x=long, y=lat), alpha = 0.5, fill = "#d0d1e6") + geom_polygon(data = uds50, aes(x=long, y=lat), alpha = 0.6, fill = "#74a9cf") 
+```
+
+
+
+

@@ -1167,7 +1167,7 @@ Add geom_polygon first if you want it to be behind your plot objects.
 
 Then add your figure data as you normally would.
 
-```{r rib line, fig.width=6, fig.height=4}
+```{r add polygon, fig.width=6, fig.height=4}
 ggplot() +
   geom_polygon(data = polygondata,aes(x = x, y = y), fill = "lightgrey", alpha = 0.4) +
   geom_line(data = ribbon, aes(x = time, y = value),color = "black") + theme(panel.grid = element_blank())
@@ -1176,14 +1176,14 @@ ggplot() +
 
 #### Other things to know: Use geom_text() and annotate() to add text to your plot. 
 
-```{r}
+```{r annotate}
 ggplot() +
   geom_polygon(data = polygondata,aes(x = x, y = y), fill = "lightgrey", alpha = 0.4) +
   geom_line(data = ribbon, aes(x = time, y = value),color = "black") + theme(panel.grid = element_blank()) + 
   annotate(geom = "text", x = 100, y = 0, label = "Positive NAO", size = 7, color = "darkgrey")
 ```
 
-```{r}
+```{r text}
 gapminder %>%
   filter(country %in% c("Sweden","Norway","Finland", "Denmark")) %>% 
   group_by(country) %>% 
@@ -1214,7 +1214,7 @@ gapminder %>%
 ## Mapping with ggplot and the sf package
 
 
-```{r}
+```{r load ufo data}
 ufodata<-read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-06-25/ufo_sightings.csv") %>% 
   filter(country == "ca")
 ```
@@ -1223,7 +1223,7 @@ There is such a thing as "ggmap", but I don't honestly recommend it. This is wha
 
 
 
-```{r}
+```{r ggmap, message=FALSE, warning=FALSE}
 bbox<-c(left = -140, bottom = 41, right = -52, top = 74)
 library(ggmap)
 ggmap(get_stamenmap(bbox, zoom = 4,maptype = "terrain-lines")) + geom_point(data = ufodata,aes(x = longitude, y = latitude), size = 2, alpha = 0.6)
@@ -1273,7 +1273,7 @@ ggplot(data = world) +
 
 You can do spatial analyses and add them onto sf maps. This is also true for raster layers or spatial polygons that you get from elsewhere. 
 
-```{r kernels}
+```{r kernels, warning=FALSE, message=FALSE}
 ufodata2<-ufodata %>% 
   filter(!is.na(state), 
          state == "ab" | state == "bc" | state == "mb")  
